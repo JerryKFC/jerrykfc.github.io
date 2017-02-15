@@ -18,9 +18,8 @@
     <link rel="icon" href="/favicon.png">
   
   
-    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
-  
   <link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/js/prettify/prettify.css">
   
 
 </head>
@@ -90,19 +89,95 @@
         <h1 id="0-背景"><a href="#0-背景" class="headerlink" title="0 背景"></a>0 背景</h1><p>最近在做对网站的自动化测试，最开始使用 Python Requests 进行测试，测试通过，然而页面还是会出现这样那样问题。一方面是因为测试用例还不够详细，另一方面，Requests 是 url 层面或者说 api 层面的测试，并没有完全模拟用户在浏览器中的操作。比如，页面有些元素是 JS 动态生成的，Requests 是无法得到的；或者页面中的 img 或者 script 链接坏了，用 Requests 的话就需要去解析 html 了，这样如果网站对排版做一点点改动就要重写测试用例，非常费时费力。<br>经过一番搜索，了解到两个神器 Selenium 和 PhantomJS。关于这两个软件，就简单说一下，Selenium 是一个Web浏览器自动化测试框架，而 PhantomJS 是一个基于 Webkit 的无 UI 的浏览器，详细介绍请自行搜索。</p>
 <h1 id="1-目的"><a href="#1-目的" class="headerlink" title="1 目的"></a>1 目的</h1><p>测试页面中哪些链接是坏的。</p>
 <h1 id="2-遇到的问题"><a href="#2-遇到的问题" class="headerlink" title="2 遇到的问题"></a>2 遇到的问题</h1><p>Selenium 可以通过 PhantomJS 获取实际显示的页面（JS 动态生成的元素也可以得到），并且可以模拟用户对页面操作，但是上面提到的页面中的链接坏了或者页面的跳转，它也是无法感知的，这些动作其实在 PhantomJS 中都可以得到，但是如果没有做处理，在 Selenium 中是无法直接得到的。</p>
-<h1 id="3-解决"><a href="#3-解决" class="headerlink" title="3 解决"></a>3 解决</h1><p>在 PhantomJS 中，可以通过许多的句柄来获取页面的动作。比如下面这个脚本可以记录整个页面访问的过程（<a href="https://github.com/ariya/phantomjs/blob/master/examples/netlog.js" target="_blank" rel="external">netlog.js</a>）：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line">&quot;use strict&quot;;</div><div class="line">var page = require(&apos;webpage&apos;).create(),</div><div class="line">    system = require(&apos;system&apos;),</div><div class="line">    address;</div><div class="line"></div><div class="line">if (system.args.length === 1) &#123;</div><div class="line">  console.log(&apos;Usage: netlog.js &lt;some URL&gt;&apos;);</div><div class="line">  phantom.exit(1);</div><div class="line">&#125; else &#123;</div><div class="line">  address = system.args[1];</div><div class="line"></div><div class="line">  page.onResourceRequested = function (req) &#123;</div><div class="line">    console.log(&apos;requested: &apos; + JSON.stringify(req, undefined, 4));</div><div class="line">  &#125;;</div><div class="line"></div><div class="line">  page.onResourceReceived = function (res) &#123;</div><div class="line">    console.log(&apos;received: &apos; + JSON.stringify(res, undefined, 4));</div><div class="line">  &#125;;</div><div class="line"></div><div class="line">  page.open(address, function (status) &#123;</div><div class="line">    if (status !== &apos;success&apos;) &#123;</div><div class="line">      console.log(&apos;FAIL to load the address&apos;);</div><div class="line">    &#125;</div><div class="line">    phantom.exit();</div><div class="line">  &#125;);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<p>执行<code>phantomjs netlog.js http://www.baidu.com</code>，可以得到如下类似的输出：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div></pre></td><td class="code"><pre><div class="line">requested: &#123;</div><div class="line">    &quot;headers&quot;: [</div><div class="line">        &#123;</div><div class="line">            &quot;name&quot;: &quot;Accept&quot;,</div><div class="line">            &quot;value&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;</div><div class="line">        &#125;,</div><div class="line">        &#123;</div><div class="line">            &quot;name&quot;: &quot;User-Agent&quot;,</div><div class="line">            &quot;value&quot;: &quot;Mozilla/5.0 (Unknown; Linux x86_64) AppleWebKit/538.1 (KHTML, like Gecko) PhantomJS/2.1.1 Safari/538.1&quot;</div><div class="line">        &#125;</div><div class="line">    ],</div><div class="line">    &quot;id&quot;: 1,</div><div class="line">    &quot;method&quot;: &quot;GET&quot;,</div><div class="line">    &quot;time&quot;: &quot;2017-01-05T03:42:14.125Z&quot;,</div><div class="line">    &quot;url&quot;: &quot;http://www.baidu.com/&quot;</div><div class="line">&#125;</div><div class="line">received: &#123;</div><div class="line">    &quot;body&quot;: &quot;&quot;,</div><div class="line">    &quot;bodySize&quot;: 215,</div><div class="line">    &quot;contentType&quot;: &quot;text/html&quot;,</div><div class="line">    &quot;headers&quot;: [</div><div class="line">        &#123;</div><div class="line">            &quot;name&quot;: &quot;Date&quot;,</div><div class="line">            &quot;value&quot;: &quot;Thu, 05 Jan 2017 03:42:14 GMT&quot;</div><div class="line">        &#125;,</div><div class="line">        &#123;</div><div class="line">            &quot;name&quot;: &quot;Content-Type&quot;,</div><div class="line">            &quot;value&quot;: &quot;text/html&quot;</div><div class="line">        &#125;,</div><div class="line">        &#123;</div><div class="line">            &quot;name&quot;: &quot;Content-Length&quot;,</div><div class="line">            &quot;value&quot;: &quot;215&quot;</div><div class="line">        &#125;,</div><div class="line"></div><div class="line">...</div></pre></td></tr></table></figure></p>
-<p>Selenium 正常调用 PhantomJS 的方法如下（Python 语言，下同）：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">from selenium import webdriver</div><div class="line">driver = webdriver.PhantomJS()</div><div class="line">driver.get(&apos;http://www.baidu.com&apos;)</div><div class="line">print(driver.get_log(&apos;browser&apos;))</div></pre></td></tr></table></figure></p>
-<p>其中最后一条语句可以得到页面的 console.log 的输出，同时会生成一个 ghostdriver.log 的文件，其中是 PhantomJS 的日志。<br>接下来就是如何在 Selenium 中获取 PhantomJS 的输出了。  </p>
-<p>首先是在 Selenium 中让 PhantomJS 执行它的 API 的 Hack（<a href="http://stackoverflow.com/questions/23125557/how-to-run-webpage-code-with-phantomjs-via-ghostdriver-selenium" target="_blank" rel="external">参考</a>）：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">driver = webdriver.PhantomJS()</div><div class="line">script = &quot;this.onResourceError = function(res) &#123;console.log(JSON.stringify(&#123;&apos;url&apos;: res.url, &apos;status&apos;: res.status&#125;));&#125;;&quot;</div><div class="line">driver.command_executor._commands[&apos;executePhantomScript&apos;] = (&apos;POST&apos;, &apos;/session/$sessionId/phantom/execute&apos;)</div><div class="line">driver.execute(&apos;executePhantomScript&apos;, &#123;&apos;script&apos;: script, &apos;args&apos;: []&#125;)</div></pre></td></tr></table></figure></p>
-<p>但是这样通过<code>driver.get_log(&#39;browser&#39;)</code>是得不到想要的内容的，因为虽然和页面 JS 的 console.log 是同样的名字，然而 PhantomJS API 的 console.log 的输出是在刚才提到的 ghostdriver.log 文件中，当然你也可以每次就读取该文件来获取内容（可以通过 webdriver 的 service_log_path 参数来设置文件名）。笔者觉得这样不够优雅，于是继续……<br>通过阅读 PhantomJS 的源码，终于在 <a href="https://github.com/ariya/phantomjs/blob/master/src/ghostdriver/session.js" target="_blank" rel="external">session.js</a> 找到了一个隐藏的变量 browserLog 来实现这个功能，这个变量其实就是<code>driver.get_log(&#39;browser&#39;)</code>读取的变量，把你想要的内容藏在这个变量里就好了。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">from selenium import webdriver</div><div class="line">driver = webdriver.PhantomJS()</div><div class="line">script = &quot;var page = this; page.onResourceError = function(res) &#123;page.browserLog.push(&#123;&apos;url&apos;: res.url, &apos;status&apos;: res.status&#125;);&#125;;&quot;</div><div class="line">driver.command_executor._commands[&apos;executePhantomScript&apos;] = (&apos;POST&apos;, &apos;/session/$sessionId/phantom/execute&apos;)</div><div class="line">driver.execute(&apos;executePhantomScript&apos;, &#123;&apos;script&apos;: script, &apos;args&apos;: []&#125;)</div><div class="line">driver.get(&apos;http://www.baidu.com&apos;)</div><div class="line">print(driver.get_log(&apos;browser&apos;))</div></pre></td></tr></table></figure></p>
-<p><strong>需要注意的是，</strong>1) PhantomJS 脚本中必须执行语句<code>var page = this</code>，然后通过 page 变量来调用 API，否则会失败。<br>2) <code>driver.get_log(&#39;browser&#39;)</code>同样也会得到页面的 console.log 的输出，需要进行过滤。它的输出格式是<code>{&quot;level&quot;: level, &quot;message&quot;: message, &quot;timestamp&quot;: timestamp}</code>，可以通过<code>filter(lambda x: &#39;url&#39; in x, driver.get_log(&#39;browser&#39;))</code>语句过滤掉。<br>3) 这个方法仅限于 PhantomJS，其他的 WebDriver 还没有测试过。</p>
+<h1 id="3-解决"><a href="#3-解决" class="headerlink" title="3 解决"></a>3 解决</h1><p>在 PhantomJS 中，可以通过许多的句柄来获取页面的动作。比如下面这个脚本可以记录整个页面访问的过程（<a href="https://github.com/ariya/phantomjs/blob/master/examples/netlog.js" target="_blank" rel="external">netlog.js</a>）：  </p>
+<pre><code>&quot;use strict&quot;;
+var page = require(&#39;webpage&#39;).create(),
+    system = require(&#39;system&#39;),
+    address;
+
+if (system.args.length === 1) {
+  console.log(&#39;Usage: netlog.js &lt;some URL&gt;&#39;);
+  phantom.exit(1);
+} else {
+  address = system.args[1];
+
+  page.onResourceRequested = function (req) {
+    console.log(&#39;requested: &#39; + JSON.stringify(req, undefined, 4));
+  };
+
+  page.onResourceReceived = function (res) {
+    console.log(&#39;received: &#39; + JSON.stringify(res, undefined, 4));
+  };
+
+  page.open(address, function (status) {
+    if (status !== &#39;success&#39;) {
+      console.log(&#39;FAIL to load the address&#39;);
+    }
+    phantom.exit();
+  });
+}
+</code></pre><p>执行<code>phantomjs netlog.js http://www.baidu.com</code>，可以得到如下类似的输出：  </p>
+<pre><code>requested: {
+    &quot;headers&quot;: [
+        {
+            &quot;name&quot;: &quot;Accept&quot;,
+            &quot;value&quot;: &quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;
+        },
+        {
+            &quot;name&quot;: &quot;User-Agent&quot;,
+            &quot;value&quot;: &quot;Mozilla/5.0 (Unknown; Linux x86_64) AppleWebKit/538.1 (KHTML, like Gecko) PhantomJS/2.1.1 Safari/538.1&quot;
+        }
+    ],
+    &quot;id&quot;: 1,
+    &quot;method&quot;: &quot;GET&quot;,
+    &quot;time&quot;: &quot;2017-01-05T03:42:14.125Z&quot;,
+    &quot;url&quot;: &quot;http://www.baidu.com/&quot;
+}
+received: {
+    &quot;body&quot;: &quot;&quot;,
+    &quot;bodySize&quot;: 215,
+    &quot;contentType&quot;: &quot;text/html&quot;,
+    &quot;headers&quot;: [
+        {
+            &quot;name&quot;: &quot;Date&quot;,
+            &quot;value&quot;: &quot;Thu, 05 Jan 2017 03:42:14 GMT&quot;
+        },
+        {
+            &quot;name&quot;: &quot;Content-Type&quot;,
+            &quot;value&quot;: &quot;text/html&quot;
+        },
+        {
+            &quot;name&quot;: &quot;Content-Length&quot;,
+            &quot;value&quot;: &quot;215&quot;
+        },
+
+...
+</code></pre><p>Selenium 正常调用 PhantomJS 的方法如下（Python 语言，下同）：  </p>
+<pre><code>from selenium import webdriver
+driver = webdriver.PhantomJS()
+driver.get(&#39;http://www.baidu.com&#39;)
+print(driver.get_log(&#39;browser&#39;))
+</code></pre><p>其中最后一条语句可以得到页面的 console.log 的输出，同时会生成一个 ghostdriver.log 的文件，其中是 PhantomJS 的日志。<br>接下来就是如何在 Selenium 中获取 PhantomJS 的输出了。  </p>
+<p>首先是在 Selenium 中让 PhantomJS 执行它的 API 的 Hack（<a href="http://stackoverflow.com/questions/23125557/how-to-run-webpage-code-with-phantomjs-via-ghostdriver-selenium" target="_blank" rel="external">参考</a>）：  </p>
+<pre><code>driver = webdriver.PhantomJS()
+script = &quot;this.onResourceError = function(res) {console.log(JSON.stringify({&#39;url&#39;: res.url, &#39;status&#39;: res.status}));};&quot;
+driver.command_executor._commands[&#39;executePhantomScript&#39;] = (&#39;POST&#39;, &#39;/session/$sessionId/phantom/execute&#39;)
+driver.execute(&#39;executePhantomScript&#39;, {&#39;script&#39;: script, &#39;args&#39;: []})
+</code></pre><p>但是这样通过<code>driver.get_log(&#39;browser&#39;)</code>是得不到想要的内容的，因为虽然和页面 JS 的 console.log 是同样的名字，然而 PhantomJS API 的 console.log 的输出是在刚才提到的 ghostdriver.log 文件中，当然你也可以每次就读取该文件来获取内容（可以通过 webdriver 的 service_log_path 参数来设置文件名）。笔者觉得这样不够优雅，于是继续……<br>通过阅读 PhantomJS 的源码，终于在 <a href="https://github.com/ariya/phantomjs/blob/master/src/ghostdriver/session.js" target="_blank" rel="external">session.js</a> 找到了一个隐藏的变量 browserLog 来实现这个功能，这个变量其实就是<code>driver.get_log(&#39;browser&#39;)</code>读取的变量，把你想要的内容藏在这个变量里就好了。</p>
+<pre><code>from selenium import webdriver
+driver = webdriver.PhantomJS()
+script = &quot;var page = this; page.onResourceError = function(res) {page.browserLog.push({&#39;url&#39;: res.url, &#39;status&#39;: res.status});};&quot;
+driver.command_executor._commands[&#39;executePhantomScript&#39;] = (&#39;POST&#39;, &#39;/session/$sessionId/phantom/execute&#39;)
+driver.execute(&#39;executePhantomScript&#39;, {&#39;script&#39;: script, &#39;args&#39;: []})
+driver.get(&#39;http://www.baidu.com&#39;)
+print(driver.get_log(&#39;browser&#39;))
+</code></pre><p><strong>需要注意的是，</strong>1) PhantomJS 脚本中必须执行语句<code>var page = this</code>，然后通过 page 变量来调用 API，否则会失败。<br>2) <code>driver.get_log(&#39;browser&#39;)</code>同样也会得到页面的 console.log 的输出，需要进行过滤。它的输出格式是<code>{&quot;level&quot;: level, &quot;message&quot;: message, &quot;timestamp&quot;: timestamp}</code>，可以通过<code>filter(lambda x: &#39;url&#39; in x, driver.get_log(&#39;browser&#39;))</code>语句过滤掉。<br>3) 这个方法仅限于 PhantomJS，其他的 WebDriver 还没有测试过。</p>
 <p>Mission accomplished.</p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://jerrykfc.github.io/2017/01/05/Selenium获取PhantomJS输出/" data-id="ciz6d4hcf00002ep9cbiluooa" class="article-share-link">Share</a>
+      <a data-url="http://jerrykfc.github.io/2017/01/05/Selenium获取PhantomJS输出/" data-id="ciz6faelk000000p9f6nz5gpu" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/automation/">automation</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/python/">python</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/tech/">tech</a></li></ul>
@@ -195,7 +270,7 @@
 </nav>
     
 
-<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<script src="//cdn.bootcss.com/jquery/2.0.3/jquery.min.js"></script>
 
 
   <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
@@ -203,6 +278,13 @@
 
 
 <script src="/js/script.js"></script>
+<script src="/js/prettify/prettify.js"></script>
+<script>
+$(window).load(function() {
+  $('pre').addClass('prettyprint linenums').attr('style', 'overflow:auto;');
+  prettyPrint();
+});
+</script>
 
   </div>
 </body>

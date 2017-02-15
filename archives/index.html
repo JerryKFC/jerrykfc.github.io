@@ -18,9 +18,8 @@
     <link rel="icon" href="/favicon.png">
   
   
-    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
-  
   <link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/js/prettify/prettify.css">
   
 
 </head>
@@ -173,7 +172,7 @@
 </nav>
     
 
-<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<script src="//cdn.bootcss.com/jquery/2.0.3/jquery.min.js"></script>
 
 
   <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
@@ -181,6 +180,13 @@
 
 
 <script src="/js/script.js"></script>
+<script src="/js/prettify/prettify.js"></script>
+<script>
+$(window).load(function() {
+  $('pre').addClass('prettyprint linenums').attr('style', 'overflow:auto;');
+  prettyPrint();
+});
+</script>
 
   </div>
 </body>
